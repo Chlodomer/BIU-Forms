@@ -386,6 +386,8 @@ body {
   .footer, .footer-simple { background: var(--bar-ilan-mint) !important; }
   .footer-avatar { background: var(--bar-ilan-green) !important; }
   .report-badge { background: var(--bar-ilan-light-blue) !important; }
+  .page-number { display: none; }
+  .faculty-label { color: rgba(255,255,255,0.9) !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 
 /* ===== Scrollbar ===== */
@@ -393,6 +395,40 @@ body {
 .form-panel::-webkit-scrollbar-track { background: transparent; }
 .form-panel::-webkit-scrollbar-thumb { background: #c5d0ca; border-radius: 3px; }
 .form-panel::-webkit-scrollbar-thumb:hover { background: #a0b0a6; }
+
+/* ===== Faculty Selector ===== */
+.faculty-group { margin-bottom: 18px; }
+.faculty-group label {
+  display: block; font-size: 13px; font-weight: 500;
+  color: var(--bar-ilan-green); margin-bottom: 5px;
+}
+.faculty-group select {
+  width: 100%; padding: 10px 14px; border: 1.5px solid #d4ddd8;
+  border-radius: 8px; font-family: var(--biu-font); font-size: 14px;
+  color: #333; background: #fff; outline: none; cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none; -moz-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23004128'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: left 12px center;
+}
+[dir="ltr"] .faculty-group select { background-position: right 12px center; }
+.faculty-group select:focus {
+  border-color: var(--bar-ilan-light-blue);
+  box-shadow: 0 0 0 3px rgba(120,205,230,0.2);
+}
+
+/* ===== Faculty Label in Document Header ===== */
+.logo-area { display: flex; flex-direction: column; gap: 4px; }
+.faculty-label {
+  font-size: 9px; font-weight: 500; color: rgba(255,255,255,0.9);
+  letter-spacing: 0.3px; margin-top: 2px;
+}
+
+/* ===== Multi-page Preview ===== */
+.page-number {
+  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+  font-size: 8px; color: #999; font-family: var(--biu-font);
+}
 </style>
 </head>
 <body>
@@ -418,6 +454,22 @@ body {
         <button class="tpl-btn" onclick="setTpl('letter')" id="tpl-letter"><span class="tpl-name">מכתב רשמי</span><span class="tpl-desc" id="tpl-letter-desc">מכתב עם חתימה וכותרת רשמית</span></button>
         <button class="tpl-btn" onclick="setTpl('report')" id="tpl-report"><span class="tpl-name">דו״ח</span><span class="tpl-desc" id="tpl-report-desc">מסמך מובנה עם מקטעים ואייקונים</span></button>
         <button class="tpl-btn" onclick="setTpl('general')" id="tpl-general"><span class="tpl-name">מסמך כללי</span><span class="tpl-desc" id="tpl-general-desc">מסמך חופשי ללא מבנה קבוע</span></button>
+      </div>
+      <!-- Faculty Selector -->
+      <div class="faculty-group">
+        <label id="lbl-faculty">פקולטה / לוגו</label>
+        <select id="f-faculty" onchange="setFaculty(this.value)">
+          <option value="general">כללי - אוניברסיטה</option>
+          <option value="exact_sciences">הפקולטה למדעים מדויקים</option>
+          <option value="engineering">הפקולטה להנדסה</option>
+          <option value="humanities">הפקולטה למדעי הרוח</option>
+          <option value="jewish_studies">הפקולטה למדעי היהדות</option>
+          <option value="law">הפקולטה למשפטים</option>
+          <option value="life_sciences">הפקולטה למדעי החיים</option>
+          <option value="medicine">הפקולטה לרפואה ע״ש אזריאלי</option>
+          <option value="social_sciences">הפקולטה למדעי החברה</option>
+          <option value="education">בית הספר לחינוך</option>
+        </select>
       </div>
       <!-- Metadata -->
       <div class="form-group">
@@ -507,6 +559,25 @@ body {
 // ============================================================
 var lang = 'he';
 var tpl = 'meeting';
+var faculty = 'general';
+
+// ============================================================
+// FACULTY DATA
+// ============================================================
+var FACULTIES = {
+  general:         { he: '', en: '' },
+  exact_sciences:  { he: 'הפקולטה למדעים מדויקים', en: 'Faculty of Exact Sciences' },
+  engineering:     { he: 'הפקולטה להנדסה', en: 'Faculty of Engineering' },
+  humanities:      { he: 'הפקולטה למדעי הרוח', en: 'Faculty of Humanities' },
+  jewish_studies:  { he: 'הפקולטה למדעי היהדות', en: 'Faculty of Jewish Studies' },
+  law:             { he: 'הפקולטה למשפטים', en: 'Faculty of Law' },
+  life_sciences:   { he: 'הפקולטה למדעי החיים', en: 'Faculty of Life Sciences' },
+  medicine:        { he: 'הפקולטה לרפואה ע״ש אזריאלי', en: 'Azrieli Faculty of Medicine' },
+  social_sciences: { he: 'הפקולטה למדעי החברה', en: 'Faculty of Social Sciences' },
+  education:       { he: 'בית הספר לחינוך', en: 'School of Education' }
+};
+
+var FACULTY_OPTIONS = ['general','exact_sciences','engineering','humanities','jewish_studies','law','life_sciences','medicine','social_sciences','education'];
 
 // ============================================================
 // SVG CONSTANTS
@@ -532,8 +603,8 @@ var ICONS = [
 // LABELS
 // ============================================================
 var L = {
-  he: { formTitle:'מחולל מסמכים', title:'כותרת', subtitle:'כותרת משנה', date:'תאריך', badge:'תג מסמך', author:'שם הכותב/ת', role:'תפקיד', issuing:'גוף מנפיק', content:'תוכן', gen:'עדכון תצוגה מקדימה', print:'הדפסה / ייצוא PDF', clear:'ניקוי טופס', dzStrong:'גרור/י קובץ', dzOr:'או לחץ/י לבחירה', dzHint:'.docx, .txt', synText:'מדריך תחביר', phTitle:'כותרת המסמך', phSub:'כותרת משנה / תרגום', phBadge:'סיכום פגישה', phAuthor:'שם מלא', phRole:'תפקיד', phIssuing:'שם הגוף / היחידה', phContent:'הקלד/י תוכן עם תחביר מארקדאון...', meeting:'סיכום פגישה', letter:'מכתב רשמי', report:'דו״ח', general:'מסמך כללי', meetingDesc:'תיעוד דיון, החלטות ומשימות', letterDesc:'מכתב עם חתימה וכותרת רשמית', reportDesc:'מסמך מובנה עם מקטעים ואייקונים', generalDesc:'מסמך חופשי ללא מבנה קבוע', univ:'אוניברסיטת בר-אילן', univAlt:'Bar-Ilan University', participants:'משתתפים', nextSteps:'הצעדים הבאים' },
-  en: { formTitle:'Document Generator', title:'Title', subtitle:'Subtitle', date:'Date', badge:'Document Badge', author:'Author Name', role:'Role', issuing:'Issuing Body', content:'Content', gen:'Update Preview', print:'Print / Export PDF', clear:'Clear Form', dzStrong:'Drag & drop a file', dzOr:'or click to select', dzHint:'.docx, .txt', synText:'Syntax Guide', phTitle:'Document title', phSub:'Subtitle / translation', phBadge:'Meeting Summary', phAuthor:'Full name', phRole:'Role', phIssuing:'Body / unit name', phContent:'Type content with markdown syntax...', meeting:'Meeting Summary', letter:'Formal Letter', report:'Report', general:'General Document', meetingDesc:'Document discussions, decisions & tasks', letterDesc:'Letter with signature and formal header', reportDesc:'Structured document with sections & icons', generalDesc:'Free-form document without fixed structure', univ:'Bar-Ilan University', univAlt:'אוניברסיטת בר-אילן', participants:'Participants', nextSteps:'Next Steps' }
+  he: { formTitle:'מחולל מסמכים', title:'כותרת', subtitle:'כותרת משנה', date:'תאריך', badge:'תג מסמך', author:'שם הכותב/ת', role:'תפקיד', issuing:'גוף מנפיק', content:'תוכן', gen:'עדכון תצוגה מקדימה', print:'הדפסה / ייצוא PDF', clear:'ניקוי טופס', dzStrong:'גרור/י קובץ', dzOr:'או לחץ/י לבחירה', dzHint:'.docx, .txt', synText:'מדריך תחביר', phTitle:'כותרת המסמך', phSub:'כותרת משנה / תרגום', phBadge:'סיכום פגישה', phAuthor:'שם מלא', phRole:'תפקיד', phIssuing:'שם הגוף / היחידה', phContent:'הקלד/י תוכן עם תחביר מארקדאון...', meeting:'סיכום פגישה', letter:'מכתב רשמי', report:'דו״ח', general:'מסמך כללי', meetingDesc:'תיעוד דיון, החלטות ומשימות', letterDesc:'מכתב עם חתימה וכותרת רשמית', reportDesc:'מסמך מובנה עם מקטעים ואייקונים', generalDesc:'מסמך חופשי ללא מבנה קבוע', univ:'אוניברסיטת בר-אילן', univAlt:'Bar-Ilan University', participants:'משתתפים', nextSteps:'הצעדים הבאים', faculty:'פקולטה / לוגו', facultyGeneral:'כללי - אוניברסיטה' },
+  en: { formTitle:'Document Generator', title:'Title', subtitle:'Subtitle', date:'Date', badge:'Document Badge', author:'Author Name', role:'Role', issuing:'Issuing Body', content:'Content', gen:'Update Preview', print:'Print / Export PDF', clear:'Clear Form', dzStrong:'Drag & drop a file', dzOr:'or click to select', dzHint:'.docx, .txt', synText:'Syntax Guide', phTitle:'Document title', phSub:'Subtitle / translation', phBadge:'Meeting Summary', phAuthor:'Full name', phRole:'Role', phIssuing:'Body / unit name', phContent:'Type content with markdown syntax...', meeting:'Meeting Summary', letter:'Formal Letter', report:'Report', general:'General Document', meetingDesc:'Document discussions, decisions & tasks', letterDesc:'Letter with signature and formal header', reportDesc:'Structured document with sections & icons', generalDesc:'Free-form document without fixed structure', univ:'Bar-Ilan University', univAlt:'אוניברסיטת בר-אילן', participants:'Participants', nextSteps:'Next Steps', faculty:'Faculty / Logo', facultyGeneral:'General - University' }
 };
 
 var TPL_DEFS = {
@@ -603,7 +674,33 @@ function setLang(l) {
   document.getElementById('tpl-general-desc').textContent = t.generalDesc;
   document.getElementById('btn-clear').textContent = t.clear;
 
+  // Update faculty selector
+  document.getElementById('lbl-faculty').textContent = t.faculty;
+  updateFacultyOptions();
+
   render();
+}
+
+// ============================================================
+// FACULTY
+// ============================================================
+function setFaculty(f) {
+  faculty = f;
+  render();
+}
+
+function updateFacultyOptions() {
+  var sel = document.getElementById('f-faculty');
+  FACULTY_OPTIONS.forEach(function(key) {
+    var opt = sel.querySelector('option[value="' + key + '"]');
+    if (opt) {
+      if (key === 'general') {
+        opt.textContent = L[lang].facultyGeneral;
+      } else {
+        opt.textContent = FACULTIES[key][lang];
+      }
+    }
+  });
 }
 
 // ============================================================
@@ -679,6 +776,8 @@ function clearForm() {
   document.getElementById('f-issuing').value = '';
   document.getElementById('f-content').value = '';
   document.getElementById('file-input').value = '';
+  document.getElementById('f-faculty').value = 'general';
+  faculty = 'general';
   render();
 }
 
@@ -813,6 +912,168 @@ function buildFooter(author, role, td) {
 }
 
 // ============================================================
+// BUILD CONTENT BLOCKS (returns array of HTML strings)
+// ============================================================
+function buildContentBlocks(blocks, td, subtitle, author, role) {
+  var blockHTMLs = [];
+
+  if (tpl === 'letter') {
+    if (subtitle) blockHTMLs.push('<div class="letter-addressee">' + fmt(subtitle) + '</div>');
+    blocks.forEach(function(b) { blockHTMLs.push(renderBlock(b)); });
+    if (td.showSig && (author || role)) {
+      var sig = '<div class="signature-area"><div class="sig-line">';
+      if (author) sig += '<div class="sig-name">' + esc(author) + '</div>';
+      if (role) sig += '<div class="sig-role">' + esc(role) + '</div>';
+      sig += '</div></div>';
+      blockHTMLs.push(sig);
+    }
+  } else {
+    var sections = [], cur = null;
+    blocks.forEach(function(b) {
+      if (b.t === 'h1') {
+        if (cur) sections.push(cur);
+        cur = { title: b.text, blocks: [] };
+      } else if (b.t === 'part') {
+        if (cur) { sections.push(cur); cur = null; }
+        sections.push({ t: 'part', lines: b.lines });
+      } else {
+        if (!cur) cur = { title: null, blocks: [] };
+        cur.blocks.push(b);
+      }
+    });
+    if (cur) sections.push(cur);
+
+    var iconIdx = 0;
+    if (sections.length > 0) {
+      sections.forEach(function(sec) {
+        if (sec.t === 'part') {
+          blockHTMLs.push(renderBlock({ t: 'part', lines: sec.lines }));
+          return;
+        }
+        var h = '<section class="section">';
+        if (sec.title && td.showSections) {
+          var icon = ICONS[iconIdx % ICONS.length]; iconIdx++;
+          h += '<div class="section-header"><div class="section-icon">' + icon + '</div><h2 class="section-title">' + esc(sec.title) + '</h2><div class="section-line"></div></div>';
+        }
+        h += '<div class="section-content">';
+        sec.blocks.forEach(function(b) { h += renderBlock(b); });
+        h += '</div></section>';
+        blockHTMLs.push(h);
+      });
+    } else if (blocks.length > 0) {
+      blocks.forEach(function(b) { blockHTMLs.push(renderBlock(b)); });
+    }
+  }
+
+  return blockHTMLs;
+}
+
+// ============================================================
+// BUILD HEADER
+// ============================================================
+function buildHeader(badge, dateStr, td) {
+  var facultyName = FACULTIES[faculty][lang];
+  var html = '<header class="header-full"><div class="logo-area">' + LOGO_FULL;
+  if (facultyName) html += '<div class="faculty-label">' + esc(facultyName) + '</div>';
+  html += '</div><div class="header-meta">';
+  if (badge && td.showBadge) html += '<div class="report-badge">' + esc(badge) + '</div>';
+  if (dateStr) html += '<div class="header-date">' + esc(dateStr) + '</div>';
+  html += '</div></header>';
+  return html;
+}
+
+// ============================================================
+// PAGINATE
+// ============================================================
+function paginate(blockHTMLs, headerHTML, titleBarHTML, footerHTML, dir, langCode) {
+  // Single empty page if no content
+  if (blockHTMLs.length === 0) {
+    return '<div class="page" dir="' + dir + '" lang="' + langCode + '">' +
+      headerHTML + titleBarHTML + '<div class="content"></div>' + footerHTML + '</div>';
+  }
+
+  // Create measurement container
+  var measurer = document.createElement('div');
+  measurer.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;';
+
+  // Build measurement page with auto height
+  var measureHTML = '<div class="page" dir="' + dir + '" lang="' + langCode + '" style="height:auto;overflow:visible;">' +
+    headerHTML + titleBarHTML +
+    '<div class="content" style="overflow:visible;flex:none;">' +
+    blockHTMLs.map(function(h, i) { return '<div data-block="' + i + '">' + h + '</div>'; }).join('') +
+    '</div>' + footerHTML + '</div>';
+
+  measurer.innerHTML = measureHTML;
+  document.body.appendChild(measurer);
+
+  // Measure component heights
+  var headerEl = measurer.querySelector('.header-full');
+  var titleBarEl = measurer.querySelector('.title-bar');
+  var footerEl = measurer.querySelector('footer');
+  var headerH = headerEl ? headerEl.offsetHeight : 0;
+  var titleBarH = titleBarEl ? titleBarEl.offsetHeight : 0;
+  var footerH = footerEl ? footerEl.offsetHeight : 0;
+  var bandH = 30; // 8mm header band
+  var contentPad = 48; // 24px top + 24px bottom
+
+  // Get page height in pixels (297mm)
+  var tempPage = document.createElement('div');
+  tempPage.style.cssText = 'position:absolute;left:-9999px;width:210mm;height:297mm;';
+  document.body.appendChild(tempPage);
+  var pageHeightPx = tempPage.offsetHeight;
+  document.body.removeChild(tempPage);
+
+  var firstPageAvail = pageHeightPx - headerH - titleBarH - footerH - contentPad;
+  var contPageAvail = pageHeightPx - bandH - footerH - contentPad;
+
+  // Measure each block
+  var blockEls = measurer.querySelectorAll('[data-block]');
+  var blockHeights = [];
+  for (var b = 0; b < blockEls.length; b++) {
+    blockHeights.push(blockEls[b].offsetHeight);
+  }
+
+  document.body.removeChild(measurer);
+
+  // Distribute blocks across pages
+  var pages = [[]];
+  var currentH = 0;
+  var maxH = firstPageAvail;
+  var pageIdx = 0;
+
+  for (var i = 0; i < blockHTMLs.length; i++) {
+    if (currentH + blockHeights[i] > maxH && pages[pageIdx].length > 0) {
+      pageIdx++;
+      pages.push([]);
+      currentH = 0;
+      maxH = contPageAvail;
+    }
+    pages[pageIdx].push(blockHTMLs[i]);
+    currentH += blockHeights[i];
+  }
+
+  // Build final pages
+  var totalPages = pages.length;
+  var html = '';
+  pages.forEach(function(blocks, i) {
+    html += '<div class="page" dir="' + dir + '" lang="' + langCode + '">';
+    if (i === 0) {
+      html += headerHTML + titleBarHTML;
+    } else {
+      html += '<div class="header-band"></div>';
+    }
+    html += '<div class="content">' + blocks.join('') + '</div>';
+    html += footerHTML;
+    if (totalPages > 1) {
+      html += '<div class="page-number">' + (i + 1) + ' / ' + totalPages + '</div>';
+    }
+    html += '</div>';
+  });
+
+  return html;
+}
+
+// ============================================================
 // MAIN RENDER
 // ============================================================
 function render() {
@@ -832,80 +1093,21 @@ function render() {
 
   var blocks = parse(content);
 
-  // Build content HTML
-  var bodyHTML = '';
+  // Build content blocks as an array for pagination
+  var blockHTMLs = buildContentBlocks(blocks, td, subtitle, author, role);
 
-  if (tpl === 'letter') {
-    // Formal letter: flat text, optional signature
-    bodyHTML += '<div class="letter-body">';
-    if (subtitle) bodyHTML += '<div class="letter-addressee">' + fmt(subtitle) + '</div>';
-    blocks.forEach(function(b) { bodyHTML += renderBlock(b); });
-    if (td.showSig && (author || role)) {
-      bodyHTML += '<div class="signature-area"><div class="sig-line">';
-      if (author) bodyHTML += '<div class="sig-name">' + esc(author) + '</div>';
-      if (role) bodyHTML += '<div class="sig-role">' + esc(role) + '</div>';
-      bodyHTML += '</div></div>';
-    }
-    bodyHTML += '</div>';
-  } else {
-    // Structured: group by h1 headings into sections
-    var sections = [], cur = null;
-    blocks.forEach(function(b) {
-      if (b.t === 'h1') {
-        if (cur) sections.push(cur);
-        cur = { title: b.text, blocks: [] };
-      } else if (b.t === 'part') {
-        sections.push({ t: 'part', lines: b.lines });
-      } else {
-        if (!cur) cur = { title: null, blocks: [] };
-        cur.blocks.push(b);
-      }
-    });
-    if (cur) sections.push(cur);
+  // Build page components
+  var headerHTML = buildHeader(badge, dateStr, td);
 
-    var iconIdx = 0;
-    if (sections.length > 0) {
-      sections.forEach(function(sec) {
-        if (sec.t === 'part') {
-          bodyHTML += renderBlock({ t: 'part', lines: sec.lines });
-          return;
-        }
-        bodyHTML += '<section class="section">';
-        if (sec.title && td.showSections) {
-          var icon = ICONS[iconIdx % ICONS.length]; iconIdx++;
-          bodyHTML += '<div class="section-header"><div class="section-icon">' + icon + '</div><h2 class="section-title">' + esc(sec.title) + '</h2><div class="section-line"></div></div>';
-        }
-        bodyHTML += '<div class="section-content">';
-        sec.blocks.forEach(function(b) { bodyHTML += renderBlock(b); });
-        bodyHTML += '</div></section>';
-      });
-    } else if (blocks.length > 0) {
-      blocks.forEach(function(b) { bodyHTML += renderBlock(b); });
-    }
-  }
+  var titleBarHTML = '<div class="title-bar"><h1 class="document-title">' +
+    (title ? esc(title) : (he ? 'כותרת המסמך' : 'Document Title')) + '</h1>';
+  if (subtitle && tpl !== 'letter') titleBarHTML += '<p class="document-subtitle">' + esc(subtitle) + '</p>';
+  titleBarHTML += '</div>';
 
-  // Build page
-  var html = '<div class="page" dir="' + dir + '" lang="' + lang + '">';
+  var footerHTML = buildFooter(author, role, td);
 
-  // Header
-  html += '<header class="header-full"><div>' + LOGO_FULL + '</div><div class="header-meta">';
-  if (badge && td.showBadge) html += '<div class="report-badge">' + esc(badge) + '</div>';
-  if (dateStr) html += '<div class="header-date">' + esc(dateStr) + '</div>';
-  html += '</div></header>';
-
-  // Title bar
-  html += '<div class="title-bar"><h1 class="document-title">' + (title ? esc(title) : (he ? 'כותרת המסמך' : 'Document Title')) + '</h1>';
-  if (subtitle && tpl !== 'letter') html += '<p class="document-subtitle">' + esc(subtitle) + '</p>';
-  html += '</div>';
-
-  // Content
-  html += '<div class="content">' + bodyHTML + '</div>';
-
-  // Footer
-  html += buildFooter(author, role, td);
-  html += '</div>';
-
-  document.getElementById('preview').innerHTML = html;
+  // Paginate and render
+  document.getElementById('preview').innerHTML = paginate(blockHTMLs, headerHTML, titleBarHTML, footerHTML, dir, lang);
 }
 </script>
 </body>
